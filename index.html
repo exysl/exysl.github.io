@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Repository</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📚 Homework Repository</h1>
+        </div>
+    
+        <div class="grid" id="mainGrid"></div>
+
+        <!-- Submission Form (hidden by default) -->
+        <div class="submission-overlay" id="submissionOverlay">
+            <div class="submission-form">
+                <button class="close-btn" onclick="toggleSubmissionForm()">&times;</button>
+                <h2>Submit Homework</h2>
+                <form id="submissionForm">
+                    <div class="form-group">
+                        <label for="subjectSelect">Subject:</label>
+                        <select id="subjectSelect" required>
+                            <option value="">Select Subject</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="submissionDate">Date:</label>
+                        <input type="date" id="submissionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="submissionComments">Comments:</label>
+                        <textarea id="submissionComments" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="submissionFiles">Attachments:</label>
+                        <input type="file" id="submissionFiles" multiple>
+                        <div id="attachmentPreview"></div>
+                    </div>
+                    <button type="submit">Submit Homework</button>
+                </form>
+            </div>
+        </div>
+        <button class="floating-submit-btn" onclick="toggleSubmissionForm()">+</button>
+    </div>
+
+    <button class="back-button" onclick="showMain()">← Back to Categories</button>
+    <script src="assets/js/script.js"></script>
+</body>
+</html>

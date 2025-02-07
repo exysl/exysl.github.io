@@ -1,0 +1,17 @@
+name: Auto PR
+on:
+  push:
+    branches: [submissions]
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          branch: submissions
+          base: main
+          title: "New Homework Submission"
+          body: "Automated submission from GitHub Classroom"
+          labels: "submission"
