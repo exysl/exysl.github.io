@@ -94,14 +94,24 @@ body {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    padding: 10px 20px;
+    padding: 12px 24px;
     background-color: var(--accent-color);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 25px;
     cursor: pointer;
-    display: none;
-    transition: background-color 0.3s;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+    display: none; /* Initially hidden */
+}
+
+.back-button:not(:hover) {
+    transform: translateY(0);
+}
+
+.back-button:hover {
+    transform: translateY(-2px);
 }
 
 .theme-toggle {
@@ -186,8 +196,6 @@ body {
     background: #f44336;
     color: white;
 }
-
-/* Remove existing .submission-toggle styles */
 
 /* New floating button styles */
 .floating-submit-btn {

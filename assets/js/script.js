@@ -28,7 +28,12 @@ function createCategoryCard(category) {
     return card;
 }
 
+let currentView = 'main'; // 'main', 'category', 'subject'
+let lastCategory = '';
+
 function showSubjects(category) {
+    currentView = 'category';
+    lastCategory = category; // Store the last category
     const mainGrid = document.getElementById('mainGrid');
     mainGrid.innerHTML = '';
     
@@ -36,18 +41,15 @@ function showSubjects(category) {
         const subjectDiv = document.createElement('div');
         subjectDiv.className = 'subject-item';
         subjectDiv.textContent = subject;
-        subjectDiv.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openSubject(category, subject);
-        });
+        subjectDiv.addEventListener('click', () => openSubject(category, subject));
         mainGrid.appendChild(subjectDiv);
     });
 
-    document.querySelector('.back-button').style.display = 'block';
-    document.querySelector('.header p').textContent = `Showing subjects for: ${category}`;
+    updateUIState(); // Update UI state to show the back button
 }
 
 function openSubject(category, subject) {
+    currentView = 'subject';
     const container = document.querySelector('.container');
     container.innerHTML = `
         <div class="header">
@@ -58,8 +60,82 @@ function openSubject(category, subject) {
             <p>Homework content for ${subject} will be displayed here.</p>
         </div>
     `;
-    document.querySelector('.back-button').style.display = 'block';
+    
+    updateUIState(category); // Pass the category to update the back button correctly
 }
+
+function updateUIState(category = null) {
+    const backBtn = document.querySelector('.back-button');
+    const floatingBtn = document.querySelector('.floating-submit-btn');
+
+    if (currentView === 'main') {
+        backBtn.style.display = 'none';
+        floatingBtn.style.display = 'block';
+    } else {
+        backBtn.style.display = 'block';
+        floatingBtn.style.display = 'none';
+    }
+
+    // Dynamically update back button behavior
+    backBtn.onclick = () => {
+        if (currentView === 'subject' && category) {
+            showSubjects(category); // Go back to category view
+        } else {
+            showMain(); // Go back to main grid
+        }
+    };
+}
+
+function openSubject(category, subject) {
+    currentView = 'subject';
+    const container = document.querySelector('.container');
+    container.innerHTML = `
+        <div class="header">
+            <h1>${subject}</h1>
+            <p>Category: ${category}</p>
+        </div>
+        <div class="content">
+            <p>Homework content for ${subject} will be displayed here.</p>
+        </div>
+    `;
+    
+    updateUIState(category); // Now passes category correctly
+}
+
+
+function showMain() {
+    currentView = 'main';
+    const mainGrid = document.getElementById('mainGrid');
+    mainGrid.innerHTML = '';
+    Object.keys(categories).forEach(category => {
+        mainGrid.appendChild(createCategoryCard(category));
+    });
+    updateUIState();
+}
+
+function updateUIState(category = null) {
+    const backBtn = document.querySelector('.back-button');
+    const floatingBtn = document.querySelector('.floating-submit-btn');
+
+    if (currentView === 'main') {
+        backBtn.style.display = 'none';
+        floatingBtn.style.display = 'block';
+    } else {
+        backBtn.style.display = 'block';
+        floatingBtn.style.display = 'none';
+    }
+
+    // Dynamically update back button behavior
+    backBtn.onclick = () => {
+        if (currentView === 'subject' && category) {
+            showSubjects(category); // Go back to category view
+        } else {
+            showMain(); // Go back to main grid
+        }
+    };
+}
+
+
 
 // Submission System
 function populateSubjectSelect() {
@@ -83,7 +159,6 @@ function setCurrentDate() {
     dateInput.value = today;
 }
 
-// Modified submission handler
 async function handleSubmission(e) {
     e.preventDefault();
     
@@ -92,7 +167,6 @@ async function handleSubmission(e) {
     const comments = document.getElementById('submissionComments').value;
     const files = Array.from(document.getElementById('submissionFiles').files);
 
-    // Validate required fields
     if (!subjectPath || !date || !comments) {
         showFeedback('❌ Please fill all required fields', 'error');
         return;
@@ -103,104 +177,62 @@ async function handleSubmission(e) {
     submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
 
     try {
-        // Create file content
-        const attachments = [];
-        for (const file of files) {
-            const url = await uploadFile(file);
-            attachments.push(`- [${file.name}](${url})`);
-        }
+        const content = `## Homework Submission\n\n**Date:** ${date}\n\n**Comments:**\n${comments}\n\n**Attachments:**\n$` +
+            files.map(f => `- [${f.name}](${f.name})`).join('\n');
 
-        const content = `## Homework Submission\n\n**Date:** ${date}\n\n**Comments:**\n${comments}\n\n**Attachments:**\n${attachments.join('\n')}`;
+        const response = await fetch(
+            `https://api.github.com/repos/exysl/exysl.github.io/contents/subjects/${subjectPath}/${Date.now()}.md`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'token YOUR_GITHUB_TOKEN',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `New submission: ${subjectPath}`,
+                    content: btoa(content),
+                    branch: 'main'
+                })
+            }
+        );
 
-        // Use proxy server for GitHub API
-        const response = await fetch('https://your-proxy-service.com/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                subjectPath,
-                content: btoa(
-                    encodeURIComponent(content).replace(/%([0-9A-F]{2})/g, (_, p1) => 
-                        String.fromCharCode(parseInt(p1, 16))
-                    )
-                ),
-            })
-        });
-
-        const result = await response.json();
+        const data = await response.json();
         
         if (response.ok) {
-            showFeedback('✅ Submission successful! PR #' + result.pr_number, 'success');
+            showFeedback('✅ Submission successful! File created', 'success');
             document.getElementById('submissionForm').reset();
             toggleSubmissionForm();
         } else {
-            throw new Error(result.message || 'Submission failed');
+            throw new Error(data.message || 'Submission failed');
         }
     } catch (error) {
-        console.error('Submission error:', error);
         showFeedback(`❌ Error: ${error.message}`, 'error');
+        console.error('Submission error:', error);
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Homework';
     }
 }
 
-async function createPullRequest(subjectPath, content) {
-    const filename = `subjects/${subjectPath}/${Date.now()}_submission.md`;
-    
-    return fetch(`https://api.github.com/repos/exysl/exysl.github.io/contents/${filename}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': 'token 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', // Replace with actual token
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            message: `New submission for ${subjectPath}`,
-            content: btoa(content),
-            branch: 'submissions'
-        })
-    });
-}
-
-async function uploadFile(file) {
-    // Implement actual file upload logic here
-    return URL.createObjectURL(file);
-}
-
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
-    const mainGrid = document.getElementById('mainGrid');
-    Object.keys(categories).forEach(category => {
-        mainGrid.appendChild(createCategoryCard(category));
-    });
+    showMain();
     populateSubjectSelect();
     setCurrentDate();
     document.getElementById('submissionForm').addEventListener('submit', handleSubmission);
 });
-
-function showMain() {
-    const mainGrid = document.getElementById('mainGrid');
-    mainGrid.innerHTML = '';
-    Object.keys(categories).forEach(category => {
-        mainGrid.appendChild(createCategoryCard(category));
-    });
-    document.querySelector('.back-button').style.display = 'none';
-    document.querySelector('.header p').textContent = 'Select a category to view subjects';
-}
 
 function toggleSubmissionForm() {
     const overlay = document.getElementById('submissionOverlay');
     overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
 }
 
-// Visual feedback system
 function showFeedback(message, type) {
     const feedback = document.createElement('div');
     feedback.className = `feedback ${type}`;
     feedback.textContent = message;
-    
     document.body.appendChild(feedback);
     setTimeout(() => feedback.remove(), 3000);
 }
+
